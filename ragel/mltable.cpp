@@ -99,7 +99,7 @@ std::ostream &OCamlTabCodeGen::TO_STATE_ACTION_SWITCH()
 		/* Write out referenced actions. */
 		if ( act->numToStateRefs > 0 ) {
 			/* Write the case label, the action and the case break. */
-			out << "\t| " << act->actionId << " -> \n";
+			out << "\t| " << act->actionId << " ->\n";
       ACTION( out, act, 0, false );
 		}
 	}
@@ -115,9 +115,8 @@ std::ostream &OCamlTabCodeGen::FROM_STATE_ACTION_SWITCH()
 		/* Write out referenced actions. */
 		if ( act->numFromStateRefs > 0 ) {
 			/* Write the case label, the action and the case break. */
-			out << "\tcase " << act->actionId << ":\n";
+			out << "\t| " << act->actionId << " ->\n";
 			ACTION( out, act, 0, false );
-			out << "\tbreak;\n";
 		}
 	}
 
@@ -132,9 +131,8 @@ std::ostream &OCamlTabCodeGen::EOF_ACTION_SWITCH()
 		/* Write out referenced actions. */
 		if ( act->numEofRefs > 0 ) {
 			/* Write the case label, the action and the case break. */
-			out << "\tcase " << act->actionId << ":\n";
+			out << "\t| " << act->actionId << " ->\n";
 			ACTION( out, act, 0, true );
-			out << "\tbreak;\n";
 		}
 	}
 
@@ -608,8 +606,8 @@ std::ostream &OCamlTabCodeGen::TRANS_ACTIONS_WI()
 
 void OCamlTabCodeGen::GOTO( ostream &ret, int gotoDest, bool inFinish )
 {
-	ret << "{" << vCS() << " = " << gotoDest << "; " << 
-			CTRL_FLOW() << "goto _again;}";
+	ret << "begin " << vCS() << " <- " << gotoDest << "; " << 
+			CTRL_FLOW() << "raise Goto_again end ";
 }
 
 void OCamlTabCodeGen::GOTO_EXPR( ostream &ret, GenInlineItem *ilItem, bool inFinish )
@@ -813,7 +811,8 @@ void OCamlTabCodeGen::writeData()
   out << "type state = { mutable keys : int; mutable trans : int; mutable acts : int; mutable nacts : int; }"
     << TOP_SEP();
 
-  out << "exception Break" << TOP_SEP();
+  out << "exception Goto_match" << TOP_SEP();
+  out << "exception Goto_again" << TOP_SEP();
 }
 
 void OCamlTabCodeGen::LOCATE_TRANS()
@@ -835,7 +834,7 @@ void OCamlTabCodeGen::LOCATE_TRANS()
 		"				lower := " << CAST(signedKeysType) << " (mid + 1)\n"
 		"			else begin\n"
 		"				state.trans <- state.trans + " << CAST(transType) << " (mid - state.keys);\n"
-		"				raise Break;\n"
+		"				raise Goto_match;\n"
 		"			end\n"
 		"		done;\n"
 		"		state.keys <- state.keys + " << CAST(keysType) << " klen;\n"
@@ -855,7 +854,7 @@ void OCamlTabCodeGen::LOCATE_TRANS()
 		"				lower := " << CAST(signedKeysType) << " (mid + 2)\n"
 		"			else begin\n"
 		"				state.trans <- state.trans + " << CAST(transType) << "((mid - state.keys) / 2);\n"
-		"				raise Break;\n"
+		"				raise Goto_match;\n"
 		"		  end\n"
 		"		done;\n"
 		"		state.trans <- state.trans + " << CAST(transType) << " klen;\n"
@@ -993,7 +992,7 @@ void OCamlTabCodeGen::writeExec()
 
   out << "\tbegin try\n";
 	LOCATE_TRANS();
-  out << "\twith Break -> () end;\n";
+  out << "\twith Goto_match -> () end;\n";
 
   out << 
     "\tdo_match ()\n";
@@ -1017,8 +1016,9 @@ void OCamlTabCodeGen::writeExec()
 
 	if ( redFsm->anyRegActions() ) {
 		out <<
-			"	match " << AT( TA(), "state.trans" ) << " with\n"
-			"\t| 0 -> do_again ()\n"
+			"\tbegin try\n"
+      "	match " << AT( TA(), "state.trans" ) << " with\n"
+			"\t| 0 -> raise Goto_again\n"
       "\t| _ ->\n"
 			"	state.acts <- " << AT( TA(), "state.trans" ) << ";\n"
 			"	state.nacts <- " << AT( A(), "incr_acts ()" ) << ";\n"
@@ -1027,7 +1027,8 @@ void OCamlTabCodeGen::writeExec()
 			ACTION_SWITCH();
 			SWITCH_DEFAULT() <<
 			"		end;\n"
-			"	done;\n";
+			"	done\n"
+      "\twith Goto_again -> () end;\n";
 	}
   out << "\tdo_again ()\n";
 
@@ -1038,7 +1039,7 @@ void OCamlTabCodeGen::writeExec()
 	if ( redFsm->anyToStateActions() ) {
 		out <<
 			"	state.acts <- " << AT( TSA(), vCS() ) << ";\n"
-			"	state.nacts = " << AT( A(), "incr_acts ()" ) << ";\n"
+			"	state.nacts <- " << AT( A(), "incr_acts ()" ) << ";\n"
 			"	while decr_nacts () > 0 do\n"
 			"		begin match " << AT( A(), "incr_acts ()" ) << " with\n";
 			TO_STATE_ACTION_SWITCH();
@@ -1082,18 +1083,18 @@ void OCamlTabCodeGen::writeExec()
 				"	if " << AT( ET(), vCS() ) << " > 0 then\n"
 				"	begin\n"
         "   state.trans <- " << CAST(transType) << "(" << AT( ET(), vCS() ) << " - 1);\n"
-				"		goto_eof_trans ();\n"
+				"		do_eof_trans ();\n"
 				"	end;\n";
 		}
 
 		if ( redFsm->anyEofActions() ) {
 			out <<
-				"	let __acts = ref " << EA() << ".[" << vCS() << "]" << " in\n"
-				"	let __nacts = ref " << A() << ".[!__acts] in\n"
+				"	let __acts = ref " << AT( EA(), vCS() ) << " in\n"
+				"	let __nacts = ref " << AT( A(), "!__acts" ) << " in\n"
         " incr __acts;\n"
 				"	while !__nacts > 0 do\n"
         "   decr __nacts;\n"
-				"		begin match " << A() << ".[!__acts] with\n";
+				"		begin match " << AT( A(), "!__acts" ) << " with\n";
 				EOF_ACTION_SWITCH();
 				SWITCH_DEFAULT() <<
 				"		end; incr __acts;\n"

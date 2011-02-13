@@ -168,7 +168,7 @@ string OCamlCodeGen::make_access(char const* name, GenInlineList* x, bool prefix
       ret << name;
     }
     else
-      ret << name << ".contents";
+      ret << name << ".contents"; // ref cell
   }
 	else {
 		ret << "(";
@@ -244,52 +244,48 @@ string OCamlCodeGen::ALPHA_KEY( Key key )
 
 void OCamlCodeGen::EXEC( ostream &ret, GenInlineItem *item, int targState, int inFinish )
 {
-	/* The parser gives fexec two children. The double brackets are for D
-	 * code. If the inline list is a single word it will get interpreted as a
-	 * C-style cast by the D compiler. */
-	ret << "{" << P() << " = ((";
+// The parser gives fexec two children.
+	ret << "begin " << P() << " <- ";
 	INLINE_LIST( ret, item->children, targState, inFinish );
-	ret << "))-1;}";
+	ret << " - 1 end; ";
 }
 
 void OCamlCodeGen::LM_SWITCH( ostream &ret, GenInlineItem *item, 
 		int targState, int inFinish )
 {
 	ret << 
-		"	switch( " << ACT() << " ) {\n";
+		"	begin match " << ACT() << " with\n";
 
 	for ( GenInlineList::Iter lma = *item->children; lma.lte(); lma++ ) {
 		/* Write the case label, the action and the case break. */
 		if ( lma->lmId < 0 )
-			ret << "	default:\n";
+			ret << "	| _ ->\n";
 		else
-			ret << "	case " << lma->lmId << ":\n";
+			ret << "	| " << lma->lmId << " ->\n";
 
 		/* Write the block and close it off. */
-		ret << "	{";
+		ret << "	begin ";
 		INLINE_LIST( ret, lma->children, targState, inFinish );
-		ret << "}\n";
-
-		ret << "	break;\n";
+		ret << " end\n";
 	}
 
 	ret << 
-		"	}\n"
+		"	end;\n"
 		"\t";
 }
 
 void OCamlCodeGen::SET_ACT( ostream &ret, GenInlineItem *item )
 {
-	ret << ACT() << " = " << item->lmId << ";";
+	ret << ACT() << " <- " << item->lmId << "; ";
 }
 
 void OCamlCodeGen::SET_TOKEND( ostream &ret, GenInlineItem *item )
 {
 	/* The tokend action sets tokend. */
-	ret << TOKEND() << " = " << P();
+	ret << TOKEND() << " <- " << P();
 	if ( item->offset != 0 ) 
 		out << "+" << item->offset;
-	out << ";";
+	out << "; ";
 }
 
 void OCamlCodeGen::GET_TOKEND( ostream &ret, GenInlineItem *item )
@@ -299,17 +295,17 @@ void OCamlCodeGen::GET_TOKEND( ostream &ret, GenInlineItem *item )
 
 void OCamlCodeGen::INIT_TOKSTART( ostream &ret, GenInlineItem *item )
 {
-	ret << TOKSTART() << " = " << NULL_ITEM() << ";";
+	ret << TOKSTART() << " <- " << NULL_ITEM() << "; ";
 }
 
 void OCamlCodeGen::INIT_ACT( ostream &ret, GenInlineItem *item )
 {
-	ret << ACT() << " = 0;";
+	ret << ACT() << " <- 0;";
 }
 
 void OCamlCodeGen::SET_TOKSTART( ostream &ret, GenInlineItem *item )
 {
-	ret << TOKSTART() << " = " << P() << ";";
+	ret << TOKSTART() << " <- " << P() << "; ";
 }
 
 void OCamlCodeGen::SUB_ACTION( ostream &ret, GenInlineItem *item, 
@@ -317,9 +313,9 @@ void OCamlCodeGen::SUB_ACTION( ostream &ret, GenInlineItem *item,
 {
 	if ( item->children->length() > 0 ) {
 		/* Write the block and close it off. */
-		ret << "{";
+		ret << "begin ";
 		INLINE_LIST( ret, item->children, targState, inFinish );
-		ret << "}";
+		ret << " end";
 	}
 }
 
@@ -353,7 +349,7 @@ void OCamlCodeGen::INLINE_LIST( ostream &ret, GenInlineList *inlineList,
 			ret << GET_KEY();
 			break;
 		case GenInlineItem::Hold:
-			ret << P() << "--;";
+			ret << P() << " <- " << P() << " - 1; ";
 			break;
 		case GenInlineItem::Exec:
 			EXEC( ret, item, targState, inFinish );
@@ -425,9 +421,9 @@ void OCamlCodeGen::ACTION( ostream &ret, GenAction *action, int targState, bool 
 	ocamlLineDirective( ret, action->loc.fileName, action->loc.line );
 
 	/* Write the block and close it off. */
-	ret << "\tbegin";
+	ret << "\t\tbegin ";
 	INLINE_LIST( ret, action->inlineList, targState, inFinish );
-	ret << "end\n";
+	ret << " end\n";
 }
 
 void OCamlCodeGen::CONDITION( ostream &ret, GenAction *condition )
@@ -644,7 +640,7 @@ std::ostream &OCamlCodeGen::SWITCH_DEFAULT()
 
 string OCamlCodeGen::CTRL_FLOW()
 {
-	return "if (true) ";
+	return "if true then ";
 }
 
 void OCamlCodeGen::finishRagelDef()

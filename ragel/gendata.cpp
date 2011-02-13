@@ -51,6 +51,8 @@
 
 #include "goipgoto.h"
 
+#include "mltable.h"
+
 #include "rubytable.h"
 #include "rubyftable.h"
 #include "rubyflat.h"
@@ -265,6 +267,27 @@ CodeGenData *csharpMakeCodeGen( const char *sourceFileName, const char *fsmName,
 	return codeGen;
 }
 
+/* Invoked by the parser when a ragel definition is opened. */
+CodeGenData *ocamlMakeCodeGen( const char *sourceFileName, const char *fsmName, ostream &out )
+{
+	CodeGenData *codeGen = 0;
+
+	switch ( codeStyle ) {
+	case GenTables:
+		codeGen = new OCamlTabCodeGen(out);
+		break;
+	default:
+		cerr << "I only support the -T0 output style for OCaml.  Please "
+			"rerun ragel including this flag.\n";
+		exit(1);
+	}
+
+	codeGen->sourceFileName = sourceFileName;
+	codeGen->fsmName = fsmName;
+
+	return codeGen;
+}
+
 
 CodeGenData *makeCodeGen( const char *sourceFileName, const char *fsmName, ostream &out )
 {
@@ -283,6 +306,8 @@ CodeGenData *makeCodeGen( const char *sourceFileName, const char *fsmName, ostre
 		cgd = rubyMakeCodeGen( sourceFileName, fsmName, out );
 	else if ( hostLang == &hostLangCSharp )
 		cgd = csharpMakeCodeGen( sourceFileName, fsmName, out );
+	else if ( hostLang == &hostLangOCaml )
+		cgd = ocamlMakeCodeGen( sourceFileName, fsmName, out );
 	return cgd;
 }
 
@@ -301,6 +326,8 @@ void lineDirective( ostream &out, const char *fileName, int line )
 			rubyLineDirective( out, fileName, line );
 		else if ( hostLang == &hostLangCSharp )
 			csharpLineDirective( out, fileName, line );
+		else if ( hostLang == &hostLangOCaml )
+			ocamlLineDirective( out, fileName, line );
 	}
 }
 

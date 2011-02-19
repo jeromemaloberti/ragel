@@ -607,14 +607,14 @@ std::ostream &OCamlTabCodeGen::TRANS_ACTIONS_WI()
 void OCamlTabCodeGen::GOTO( ostream &ret, int gotoDest, bool inFinish )
 {
 	ret << "begin " << vCS() << " <- " << gotoDest << "; " << 
-			CTRL_FLOW() << "raise Goto_again end ";
+			CTRL_FLOW() << "raise Goto_again end";
 }
 
 void OCamlTabCodeGen::GOTO_EXPR( ostream &ret, GenInlineItem *ilItem, bool inFinish )
 {
-	ret << "{" << vCS() << " = (";
+	ret << "begin " << vCS() << " <- (";
 	INLINE_LIST( ret, ilItem->children, 0, inFinish );
-	ret << "); " << CTRL_FLOW() << "goto _again;}";
+	ret << "); " << CTRL_FLOW() << "raise Goto_again end";
 }
 
 void OCamlTabCodeGen::CURS( ostream &ret, bool inFinish )
@@ -642,50 +642,49 @@ void OCamlTabCodeGen::NEXT_EXPR( ostream &ret, GenInlineItem *ilItem, bool inFin
 void OCamlTabCodeGen::CALL( ostream &ret, int callDest, int targState, bool inFinish )
 {
 	if ( prePushExpr != 0 ) {
-		ret << "{";
+		ret << "begin ";
 		INLINE_LIST( ret, prePushExpr, 0, false );
 	}
 
-	ret << "{" << STACK() << "[" << TOP() << "++] = " << vCS() << "; " << vCS() << " = " << 
-			callDest << "; " << CTRL_FLOW() << "goto _again;}";
+	ret << "begin " << AT( STACK(), POST_INCR(TOP()) ) << " <- " << vCS() << "; ";
+  ret << vCS() << " <- " << callDest << "; " << CTRL_FLOW() << "raise Goto_again end ";
 
 	if ( prePushExpr != 0 )
-		ret << "}";
+		ret << "end";
 }
 
 void OCamlTabCodeGen::CALL_EXPR( ostream &ret, GenInlineItem *ilItem, int targState, bool inFinish )
 {
 	if ( prePushExpr != 0 ) {
-		ret << "{";
+		ret << "begin ";
 		INLINE_LIST( ret, prePushExpr, 0, false );
 	}
 
-	ret << "{" << STACK() << "[" << TOP() << "++] = " << vCS() << "; " << vCS() << " = (";
+	ret << "begin " << AT(STACK(), POST_INCR(TOP()) ) << " <- " << vCS() << "; " << vCS() << " <- (";
 	INLINE_LIST( ret, ilItem->children, targState, inFinish );
-	ret << "); " << CTRL_FLOW() << "goto _again;}";
+	ret << "); " << CTRL_FLOW() << "raise Goto_again end ";
 
 	if ( prePushExpr != 0 )
-		ret << "}";
+		ret << "end";
 }
 
 void OCamlTabCodeGen::RET( ostream &ret, bool inFinish )
 {
-	ret << "{" << vCS() << " = " << STACK() << "[--" << 
-			TOP() << "]; ";
+	ret << "begin " << vCS() << " <- " << AT(STACK(), PRE_DECR(TOP()) ) << "; ";
 
 	if ( postPopExpr != 0 ) {
-		ret << "{";
+		ret << "begin ";
 		INLINE_LIST( ret, postPopExpr, 0, false );
-		ret << "}";
+		ret << "end ";
 	}
 
-	ret << CTRL_FLOW() <<  "goto _again;}";
+	ret << CTRL_FLOW() <<  "raise Goto_again end";
 }
 
 void OCamlTabCodeGen::BREAK( ostream &ret, int targState )
 {
 	outLabelUsed = true;
-	ret << "{" << P() << "++; " << CTRL_FLOW() << "goto _out; }";
+	ret << "begin " << P() << " <- " << P() << " + 1; " << CTRL_FLOW() << "raise Goto_out end";
 }
 
 void OCamlTabCodeGen::writeData()
@@ -1076,7 +1075,7 @@ void OCamlTabCodeGen::writeExec()
 	if ( redFsm->anyEofTrans() || redFsm->anyEofActions() ) {
 		out << 
 			"	if " << P() << " = " << vEOF() << " then\n"
-			"	begin\n";
+			"	begin try\n";
 
 		if ( redFsm->anyEofTrans() ) {
 			out <<
@@ -1102,10 +1101,13 @@ void OCamlTabCodeGen::writeExec()
 		}
 
 		out << 
-			"	end;\n"
+			"	with Goto_again -> do_again () end\n"
 			"\n";
 	}
-  out << "\t()\n";
+  else
+  {
+    out << "\t()\n";
+  }
 
 	if ( outLabelUsed )
 		out << "	and do_out () = ()\n";

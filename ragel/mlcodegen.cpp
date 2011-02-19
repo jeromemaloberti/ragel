@@ -473,10 +473,44 @@ void OCamlCodeGen::writeInit()
 	out << "	end;\n";
 }
 
+string OCamlCodeGen::PRE_INCR(string val)
+{
+  ostringstream ret;
+  ret << "(" << val << " <- " << val << " + 1; " << val << ")";
+  return ret.str();
+}
+
+string OCamlCodeGen::POST_INCR(string val)
+{
+  ostringstream ret;
+  ret << "(let temp = " << val << " in " << val << " <- " << val << " + 1; temp)";
+  return ret.str();
+}
+
+string OCamlCodeGen::PRE_DECR(string val)
+{
+  ostringstream ret;
+  ret << "(" << val << " <- " << val << " - 1; " << val << ")";
+  return ret.str();
+}
+
+string OCamlCodeGen::POST_DECR(string val)
+{
+  ostringstream ret;
+  ret << "(let temp = " << val << " in " << val << " <- " << val << " - 1; temp)";
+  return ret.str();
+}
+
 string OCamlCodeGen::DATA_PREFIX()
 {
+  if ( data_prefix.empty() ) // init
+  {
+    data_prefix = string(fsmName) + "_";
+    if (data_prefix.size() > 0)
+      data_prefix[0] = ::tolower(data_prefix[0]); // uncapitalize
+  }
 	if ( !noPrefix )
-		return FSM_NAME() + "_";
+		return data_prefix;
 	return "";
 }
 

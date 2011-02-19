@@ -68,6 +68,8 @@ public:
 	virtual void writeError();
 
 protected:
+  string data_prefix;
+
 	string FSM_NAME();
 	string START_STATE_ID();
 	ostream &ACTIONS_ARRAY();
@@ -103,6 +105,14 @@ protected:
 	string TOKSTART();
 	string TOKEND();
 	string ACT();
+
+  // ++x
+  string PRE_INCR(string);
+  string PRE_DECR(string);
+
+  // x++
+  string POST_INCR(string);
+  string POST_DECR(string);
 
 	string DATA_PREFIX();
 	string PM() { return "_" + DATA_PREFIX() + "partition_map"; }

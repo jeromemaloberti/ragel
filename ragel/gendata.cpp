@@ -52,6 +52,7 @@
 #include "goipgoto.h"
 
 #include "mltable.h"
+#include "mlftable.h"
 
 #include "rubytable.h"
 #include "rubyftable.h"
@@ -276,9 +277,11 @@ CodeGenData *ocamlMakeCodeGen( const char *sourceFileName, const char *fsmName, 
 	case GenTables:
 		codeGen = new OCamlTabCodeGen(out);
 		break;
+	case GenFTables:
+		codeGen = new OCamlFTabCodeGen(out);
+		break;
 	default:
-		cerr << "I only support the -T0 output style for OCaml.  Please "
-			"rerun ragel including this flag.\n";
+		cerr << "I only support the -T0 and -T1 output styles for OCaml.\n";
 		exit(1);
 	}
 

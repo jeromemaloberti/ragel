@@ -812,6 +812,7 @@ void OCamlTabCodeGen::writeData()
 
   out << "exception Goto_match" << TOP_SEP();
   out << "exception Goto_again" << TOP_SEP();
+  out << "exception Goto_eof_trans" << TOP_SEP();
 }
 
 void OCamlTabCodeGen::LOCATE_TRANS()
@@ -1082,8 +1083,8 @@ void OCamlTabCodeGen::writeExec()
 				"	if " << AT( ET(), vCS() ) << " > 0 then\n"
 				"	begin\n"
         "   state.trans <- " << CAST(transType) << "(" << AT( ET(), vCS() ) << " - 1);\n"
-				"		do_eof_trans ();\n"
-				"	end;\n";
+				"		raise Goto_eof_trans;\n"
+				"	end\n";
 		}
 
 		if ( redFsm->anyEofActions() ) {
@@ -1101,7 +1102,8 @@ void OCamlTabCodeGen::writeExec()
 		}
 
 		out << 
-			"	with Goto_again -> do_again () end\n"
+			"	with Goto_again -> do_again ()\n"
+			"	| Goto_eof_trans -> do_eof_trans () end\n"
 			"\n";
 	}
   else

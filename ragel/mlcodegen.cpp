@@ -423,7 +423,7 @@ void OCamlCodeGen::ACTION( ostream &ret, GenAction *action, int targState, bool 
 	/* Write the block and close it off. */
 	ret << "\t\tbegin ";
 	INLINE_LIST( ret, action->inlineList, targState, inFinish );
-	ret << " end\n";
+	ret << " end;\n";
 }
 
 void OCamlCodeGen::CONDITION( ostream &ret, GenAction *condition )

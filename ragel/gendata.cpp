@@ -54,6 +54,7 @@
 #include "mltable.h"
 #include "mlftable.h"
 #include "mlflat.h"
+#include "mlfflat.h"
 
 #include "rubytable.h"
 #include "rubyftable.h"
@@ -284,8 +285,11 @@ CodeGenData *ocamlMakeCodeGen( const char *sourceFileName, const char *fsmName, 
 	case GenFlat:
 		codeGen = new OCamlFlatCodeGen(out);
 		break;
+	case GenFFlat:
+		codeGen = new OCamlFFlatCodeGen(out);
+		break;
 	default:
-		cerr << "I only support the -T0 -T1 and -F0 output styles for OCaml.\n";
+		cerr << "I only support the -T0 -T1 -F0 and -F1 output styles for OCaml.\n";
 		exit(1);
 	}
 

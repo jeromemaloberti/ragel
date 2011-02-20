@@ -952,8 +952,6 @@ void OCamlTabCodeGen::writeExec()
 
   out <<
     "	let state = { keys = 0; trans = 0; acts = 0; nacts = 0; } in\n"
-    "	let incr_acts () = let x = state.acts in state.acts <- state.acts + 1; x in\n"
-    "	let decr_nacts () = let x = state.nacts in state.nacts <- state.nacts - 1; x in\n"
     "	let rec do_start () =\n";
 	if ( !noEnd ) {
 		testEofUsed = true;
@@ -977,9 +975,9 @@ void OCamlTabCodeGen::writeExec()
 	if ( redFsm->anyFromStateActions() ) {
 		out <<
 			"	state.acts <- " << AT( FSA(), vCS() ) << ";\n"
-			"	state.nacts <- " << AT( A(), "incr_acts ()" ) << ";\n"
-			"	while decr_nacts () > 0 do\n"
-			"		begin match " << AT( A(), "incr_acts ()" ) << " with\n";
+			"	state.nacts <- " << AT( A(), POST_INCR("state.acts") ) << ";\n"
+			"	while " << POST_DECR("state.nacts") << " > 0 do\n"
+			"		begin match " << AT( A(), POST_INCR("state.acts") ) << " with\n";
 			FROM_STATE_ACTION_SWITCH();
 			SWITCH_DEFAULT() <<
 			"		end\n"
@@ -1021,9 +1019,9 @@ void OCamlTabCodeGen::writeExec()
 			"\t| 0 -> raise Goto_again\n"
       "\t| _ ->\n"
 			"	state.acts <- " << AT( TA(), "state.trans" ) << ";\n"
-			"	state.nacts <- " << AT( A(), "incr_acts ()" ) << ";\n"
-			"	while decr_nacts () > 0 do\n"
-			"		begin match " << AT( A(), "incr_acts ()" ) << " with\n";
+			"	state.nacts <- " << AT( A(), POST_INCR("state.acts") ) << ";\n"
+			"	while " << POST_DECR("state.nacts") << " > 0 do\n"
+			"		begin match " << AT( A(), POST_INCR("state.acts") ) << " with\n";
 			ACTION_SWITCH();
 			SWITCH_DEFAULT() <<
 			"		end;\n"
@@ -1039,9 +1037,9 @@ void OCamlTabCodeGen::writeExec()
 	if ( redFsm->anyToStateActions() ) {
 		out <<
 			"	state.acts <- " << AT( TSA(), vCS() ) << ";\n"
-			"	state.nacts <- " << AT( A(), "incr_acts ()" ) << ";\n"
-			"	while decr_nacts () > 0 do\n"
-			"		begin match " << AT( A(), "incr_acts ()" ) << " with\n";
+			"	state.nacts <- " << AT( A(), POST_INCR("state.acts") ) << ";\n"
+			"	while " << POST_DECR("state.nacts") << " > 0 do\n"
+			"		begin match " << AT( A(), POST_INCR("state.acts") ) << " with\n";
 			TO_STATE_ACTION_SWITCH();
 			SWITCH_DEFAULT() <<
 			"		end\n"
@@ -1094,10 +1092,10 @@ void OCamlTabCodeGen::writeExec()
         " incr __acts;\n"
 				"	while !__nacts > 0 do\n"
         "   decr __nacts;\n"
-				"		begin match " << AT( A(), "!__acts" ) << " with\n";
+				"		begin match " << AT( A(), POST_INCR("__acts.contents") ) << " with\n";
 				EOF_ACTION_SWITCH();
 				SWITCH_DEFAULT() <<
-				"		end; incr __acts;\n"
+				"		end;\n"
 				"	done\n";
 		}
 

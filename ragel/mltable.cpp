@@ -629,12 +629,12 @@ void OCamlTabCodeGen::TARGS( ostream &ret, bool inFinish, int targState )
 
 void OCamlTabCodeGen::NEXT( ostream &ret, int nextDest, bool inFinish )
 {
-	ret << vCS() << " = " << nextDest << ";";
+	ret << vCS() << " <- " << nextDest << ";";
 }
 
 void OCamlTabCodeGen::NEXT_EXPR( ostream &ret, GenInlineItem *ilItem, bool inFinish )
 {
-	ret << vCS() << " = (";
+	ret << vCS() << " <- (";
 	INLINE_LIST( ret, ilItem->children, 0, inFinish );
 	ret << ");";
 }

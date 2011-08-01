@@ -444,9 +444,9 @@ void OCamlFlatCodeGen::LOCATE_TRANS()
 {
   std::ostringstream temp;
   temp << "inds + (\n"
-		"		if slen > 0 && " << AT( K(), "keys" ) << " <= Char.code " << GET_WIDE_KEY() << " &&\n"
-		"		Char.code " << GET_WIDE_KEY() << " <= " << AT( K(), "keys+1" ) << " then\n"
-		"		Char.code " << GET_WIDE_KEY() << " - " << AT(K(), "keys" ) << " else slen)";
+		"		if slen > 0 && " << AT( K(), "keys" ) << " <= " << GET_WIDE_KEY() << " &&\n"
+		"		" << GET_WIDE_KEY() << " <= " << AT( K(), "keys+1" ) << " then\n"
+		"		" << GET_WIDE_KEY() << " - " << AT(K(), "keys" ) << " else slen)";
 	out <<
 		"	let keys = " << vCS() << " lsl 1 in\n"
 		"	let inds = " << AT( IO(), vCS() ) << " in\n"

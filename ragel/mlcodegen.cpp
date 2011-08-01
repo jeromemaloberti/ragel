@@ -193,7 +193,7 @@ string OCamlCodeGen::GET_WIDE_KEY()
 	if ( redFsm->anyConditions() ) 
 		return "_widec";
 	else
-    { ostringstream ret; ret << "Char.code " << GET_KEY(); return ret.str(); }
+		{ ostringstream ret; ret << "Char.code " << GET_KEY(); return ret.str(); }
 }
 
 string OCamlCodeGen::GET_WIDE_KEY( RedStateAp *state )
@@ -201,7 +201,7 @@ string OCamlCodeGen::GET_WIDE_KEY( RedStateAp *state )
 	if ( state->stateCondList.length() > 0 )
 		return "_widec";
 	else
-    { ostringstream ret; ret << "Char.code " << GET_KEY(); return ret.str(); }
+		{ ostringstream ret; ret << "Char.code " << GET_KEY(); return ret.str(); }
 }
 
 /* Write out level number of tabs. Makes the nested binary search nice
